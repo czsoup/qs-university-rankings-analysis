@@ -1,0 +1,24 @@
+# Dépendances
+vendor/
+node_modules/
+
+# Fichiers système Windows
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Fichiers temporaires Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Fichiers sensibles (ne jamais committer)
+.env
+*.env.local
+
+# Fichiers générés localement
+C:\Users\*

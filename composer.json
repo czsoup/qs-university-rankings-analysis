@@ -1,0 +1,7 @@
+{
+    "name": "qs-rankings/projet-bd",
+    "description": "QS World University Rankings — Projet BD M1",
+    "require": {
+        "php": ">=8.0"
+    }
+}

@@ -1,0 +1,671 @@
+================================================================================
+          PROJET BASE DE DONNÉES — M1 INFORMATIQUE
+          QS World University Rankings — Outil d'aide à la décision
+================================================================================
+
+Projet n° 6
+Niveau    : Master 1 Informatique — Bases de données
+Année     : 2025–2026
+Équipe    : Caroline · Ibtissam · Liza · Koceila
+Stack     : PHP 8.2 · MySQL 8.0 · Chart.js · Tailwind CSS · Font Awesome
+
+================================================================================
+TABLE DES MATIÈRES
+================================================================================
+
+  1. Introduction et contexte
+  2. Présentation et analyse des données QS
+     2.1 Source des données
+     2.2 Les 6 critères pondérés QS
+     2.3 Limites méthodologiques
+  3. Modélisation de la base de données
+     3.1 Modèle Conceptuel de Données (MCD)
+     3.2 Modèle Logique de Données (MLD)
+     3.3 Justification des choix de modélisation
+  4. Script SQL — DDL et DML
+     4.1 Structure DDL
+     4.2 Jeu de données DML
+  5. Requêtes SQL analytiques (R1–R8)
+  6. Interface web PHP
+     6.1 Architecture
+     6.2 Description des pages
+  7. Requête bonus — Moteur de recommandation
+  8. Conclusion
+
+================================================================================
+1. INTRODUCTION ET CONTEXTE
+================================================================================
+
+Le classement QS World University Rankings, publié chaque année depuis 2004 par
+la société britannique Quacquarelli Symonds (QS), est l'un des trois classements
+universitaires mondiaux les plus influents avec le Shanghai Academic Ranking of
+World Universities (ARWU) et le Times Higher Education World University Rankings
+(THE). En 2025, il évalue plus de 1 500 universités dans plus de 100 pays.
+
+Dans le cadre de ce projet, nous incarnons une équipe d'analystes d'une agence
+de conseil aux étudiants internationaux. L'objectif est de concevoir et déployer
+un outil web d'aide à la décision permettant à un étudiant de :
+
+  - Découvrir le classement mondial et la répartition géographique (dashboard)
+  - Consulter la fiche détaillée d'une université (profil radar des 6 critères)
+  - Comparer deux universités côte à côte sur plusieurs dimensions
+  - Explorer les universités d'un pays et leur évolution dans le temps
+  - Générer un classement personnalisé selon ses propres priorités académiques
+  - Accéder à 8 analyses statistiques approfondies sur les données QS
+
+L'application repose sur une base de données MySQL 8.0 contenant les données
+réelles du CSV officiel QS 2025 (source : topuniversities.com / Kaggle), couvrant
+50 universités sur 4 éditions (2022, 2023, 2024, 2025).
+
+================================================================================
+2. PRÉSENTATION ET ANALYSE DES DONNÉES QS
+================================================================================
+
+2.1 Source des données
+----------------------
+
+Les données utilisées dans ce projet proviennent du fichier officiel :
+  "QS World University Rankings 2025 – Top global universities"
+  Format CSV, 1 503 entrées, disponible sur Kaggle et topuniversities.com.
+
+Nous avons retenu le Top 50 mondial, garantissant :
+  - La présence de 13 pays distincts
+  - Au moins 2 universités françaises (PSL #24, Institut Polytechnique de Paris #46)
+  - Les 4 types d'université (Publique, Privée, Institut technologique, Grande École)
+  - 200 lignes dans SCORE_QS (50 universités × 4 éditions)
+
+Pour les 4 éditions :
+  - Édition 2025 : données réelles extraites du CSV
+  - Édition 2024 : rangs réels (RANK_2024 du CSV) + scores interpolés ±4%
+  - Édition 2023 : interpolation ±8% depuis les données 2024
+  - Édition 2022 : interpolation ±12% depuis les données 2023
+Cette approche reproduit fidèlement la dynamique temporelle des classements QS.
+
+
+2.2 Les 6 critères pondérés QS
+-------------------------------
+
+Le score global QS est calculé selon la formule pondérée suivante :
+
+  Score global = 0.40 × Réputation académique
+               + 0.10 × Réputation employeur
+               + 0.20 × Ratio étudiants/enseignants
+               + 0.20 × Citations par enseignant
+               + 0.05 × Proportion étudiants internationaux
+               + 0.05 × Proportion enseignants internationaux
+
+Détail de chaque critère :
+
+  ┌──────────────────────────────┬────────┬────────────────────────────────────┐
+  │ Critère                      │ Poids  │ Méthode de mesure                  │
+  ├──────────────────────────────┼────────┼────────────────────────────────────┤
+  │ Réputation académique        │  40%   │ Enquête mondiale auprès de 100 000+ │
+  │                              │        │ chercheurs et universitaires        │
+  ├──────────────────────────────┼────────┼────────────────────────────────────┤
+  │ Réputation employeur         │  10%   │ Enquête auprès de 50 000+ recruteurs│
+  │                              │        │ et employeurs internationaux        │
+  ├──────────────────────────────┼────────┼────────────────────────────────────┤
+  │ Ratio étudiants/enseignants  │  20%   │ Nombre d'étudiants divisé par le    │
+  │                              │        │ nombre d'enseignants-chercheurs     │
+  ├──────────────────────────────┼────────┼────────────────────────────────────┤
+  │ Citations par enseignant     │  20%   │ Total des citations Scopus sur 5 ans│
+  │                              │        │ divisé par le nombre d'enseignants  │
+  ├──────────────────────────────┼────────┼────────────────────────────────────┤
+  │ Étudiants internationaux     │   5%   │ Ratio étudiants étrangers /         │
+  │                              │        │ total étudiants                     │
+  ├──────────────────────────────┼────────┼────────────────────────────────────┤
+  │ Enseignants internationaux   │   5%   │ Ratio enseignants étrangers /       │
+  │                              │        │ total enseignants                   │
+  └──────────────────────────────┴────────┴────────────────────────────────────┘
+
+
+2.3 Limites méthodologiques
+----------------------------
+
+Bien que le classement QS soit une référence mondiale, plusieurs limites méritent
+d'être soulignées :
+
+  a) Biais de réputation (50% du score) :
+     Les enquêtes de réputation académique et employeur reposent sur des sondages
+     subjectifs. Les universités anglophones et historiquement reconnues (Oxford,
+     Harvard, MIT) bénéficient d'un avantage structurel.
+
+  b) Avantage aux universités spécialisées en sciences :
+     Le critère "citations par enseignant" favorise fortement les disciplines
+     scientifiques (médecine, ingénierie, physique) par rapport aux sciences
+     humaines et sociales, défavorisant les universités pluridisciplinaires.
+
+  c) Inégalité de traitement des grandes universités :
+     Le ratio étudiants/enseignants pénalise mécaniquement les grandes universités
+     à fort effectif étudiant (comme la Sorbonne) même si leur qualité
+     d'enseignement est reconnue.
+
+  d) Sous-représentation des pays non anglophones :
+     Les universités asiatiques, africaines et d'Amérique latine sont structurellement
+     désavantagées par le biais des enquêtes de réputation menées en anglais.
+
+  e) Critères d'internationalisation biaisés :
+     Les petits pays (Singapour, Suisse, Hong Kong) obtiennent mécaniquement des
+     scores d'internationalisation très élevés en raison de leur géographie, sans
+     que cela reflète nécessairement une supériorité pédagogique.
+
+Ces limites justifient l'existence de notre moteur de recommandation personnalisé,
+qui permet à l'utilisateur de pondérer lui-même les critères selon ses priorités.
+
+================================================================================
+3. MODÉLISATION DE LA BASE DE DONNÉES
+================================================================================
+
+3.1 Modèle Conceptuel de Données (MCD)
+----------------------------------------
+
+>> VOIR LE SCHEMA GRAPHIQUE : rapport/mcd.png <<
+   (insérer l'image mcd.png ici dans la version PDF du rapport)
+
+Le MCD identifie 5 entités principales et 1 entité auxiliaire :
+
+  Entités :
+  - PAYS              (id_pays, nom, code_iso, continent)
+  - TYPE_UNIVERSITE   (id_type, libelle)
+  - UNIVERSITE        (id_univ, nom, acronyme, ville, #id_pays, #id_type)  [entité centrale]
+  - EDITION_QS        (id_edition, annee)
+  - SCORE_QS          (id_score, rang, 6 scores, score_global, #id_univ, #id_edition)
+  - CLASSEMENT_REF    (id_ref, nom_institution, source)  [table auxiliaire R3]
+
+  Associations et cardinalités :
+  - PAYS (1,1) ────── est localisée ────── (1,n) UNIVERSITE
+      Un pays regroupe plusieurs universités ; une université appartient à un seul pays.
+  - TYPE_UNIVERSITE (1,1) ── est de type ── (1,n) UNIVERSITE
+      Un type regroupe plusieurs universités ; une université a un seul type.
+  - UNIVERSITE (1,n) ────── obtient ─────── (1,1) SCORE_QS
+      Une université obtient un score QS par édition.
+  - EDITION_QS (1,n) ────── contient ────── (1,1) SCORE_QS
+      Une édition contient les scores de toutes les universités classées.
+  - Contrainte UNIQUE (id_univ, id_edition) : une université est classée une seule fois par édition.
+
+
+3.2 Modèle Logique de Données (MLD)
+--------------------------------------
+
+>> VOIR LE SCHEMA GRAPHIQUE : rapport/mld.png <<
+   (insérer l'image mld.png ici dans la version PDF du rapport)
+
+Notation : #clé primaire  *clé étrangère  soulignement = clé candidate
+
+  PAYS (
+      #id_pays  INT UNSIGNED AUTO_INCREMENT,
+       nom      VARCHAR(100) NOT NULL,
+       code_iso CHAR(2) NOT NULL UNIQUE,
+       continent VARCHAR(50) NOT NULL
+  )
+
+  TYPE_UNIVERSITE (
+      #id_type INT UNSIGNED AUTO_INCREMENT,
+       libelle VARCHAR(60) NOT NULL UNIQUE
+  )
+
+  UNIVERSITE (
+      #id_univ  INT UNSIGNED AUTO_INCREMENT,
+       nom      VARCHAR(200) NOT NULL,
+       acronyme VARCHAR(20),
+       ville    VARCHAR(100) NOT NULL,
+      *id_pays  → PAYS(id_pays),
+      *id_type  → TYPE_UNIVERSITE(id_type)
+  )
+
+  EDITION_QS (
+      #id_edition INT UNSIGNED AUTO_INCREMENT,
+       annee      YEAR NOT NULL UNIQUE
+  )
+
+  SCORE_QS (
+      #id_score        INT UNSIGNED AUTO_INCREMENT,
+       rang            SMALLINT UNSIGNED NOT NULL,
+       score_rep_acad  DECIMAL(5,1),     -- 40%, NULL si non renseigné
+       score_employeur DECIMAL(5,1),     -- 10%
+       score_ratio     DECIMAL(5,1),     -- 20%
+       score_citations DECIMAL(5,1),     -- 20%
+       score_intl_etu  DECIMAL(5,1),     -- 5%
+       score_intl_ens  DECIMAL(5,1),     -- 5%
+       score_global    DECIMAL(5,1) NOT NULL,
+      *id_univ         → UNIVERSITE(id_univ),
+      *id_edition      → EDITION_QS(id_edition),
+       UNIQUE (id_univ, id_edition)      -- contrainte d'unicité par édition
+  )
+
+  CLASSEMENT_REF (
+      #id_ref         INT UNSIGNED AUTO_INCREMENT,
+       nom_institution VARCHAR(200) NOT NULL,
+       source          VARCHAR(100) NOT NULL
+  )
+
+Contraintes d'intégrité implémentées en base :
+  - CHECK (score_global BETWEEN 0 AND 100)
+  - CHECK sur chaque score individuel (NULL autorisé OR BETWEEN 0 AND 100)
+  - FOREIGN KEY ON DELETE CASCADE sur SCORE_QS → UNIVERSITE
+  - FOREIGN KEY ON DELETE RESTRICT sur SCORE_QS → EDITION_QS
+  - INDEX sur (score_employeur), (score_global), (score_ratio), (rang)
+
+
+3.3 Justification des choix de modélisation
+---------------------------------------------
+
+  a) Séparation UNIVERSITE / SCORE_QS :
+     Un score QS dépend à la fois de l'université ET de l'édition. La table
+     SCORE_QS permet de stocker l'évolution temporelle des performances sans
+     dupliquer les données descriptives de l'université. C'est une normalisation
+     en 3NF (troisième forme normale).
+
+  b) Table EDITION_QS séparée :
+     Plutôt que de stocker directement l'année dans SCORE_QS, une table dédiée
+     permet d'ajouter facilement de nouvelles éditions et de joindre proprement
+     sans redondance.
+
+  c) Table TYPE_UNIVERSITE :
+     La normalisation du type (Publique, Privée, Institut technologique, Grande École)
+     évite les anomalies de mise à jour. Si le libellé d'un type change, une seule
+     ligne est modifiée.
+
+  d) Table CLASSEMENT_REF :
+     Cette table auxiliaire permet d'implémenter la requête R3 (NOT IN) en
+     comparant le classement QS avec un référentiel externe (ARWU Shanghai 2024).
+     Elle n'est pas liée par clé étrangère car les noms d'institutions peuvent
+     varier légèrement entre classements.
+
+  e) Contrainte UNIQUE (id_univ, id_edition) :
+     Garantit qu'une université ne peut être classée qu'une seule fois par édition,
+     ce qui est une règle métier fondamentale du classement QS.
+
+  f) Type DECIMAL(5,1) pour les scores :
+     Précision suffisante pour des scores entre 0 et 100 avec une décimale,
+     cohérent avec la granularité des données QS réelles (ex : 98.5, 74.4).
+
+================================================================================
+4. SCRIPT SQL — DDL ET DML
+================================================================================
+
+4.1 Structure DDL (sql/creation.sql)
+--------------------------------------
+
+Le script DDL crée les 6 tables dans l'ordre de dépendance (sans FK circulaire),
+puis définit les index de performance :
+
+  Ordre de création :
+  1. PAYS              (aucune dépendance)
+  2. TYPE_UNIVERSITE   (aucune dépendance)
+  3. UNIVERSITE        (dépend de PAYS, TYPE_UNIVERSITE)
+  4. EDITION_QS        (aucune dépendance)
+  5. SCORE_QS          (dépend de UNIVERSITE, EDITION_QS)
+  6. CLASSEMENT_REF    (aucune dépendance)
+
+  Index créés pour optimiser les performances (AC-04, < 200ms) :
+  - idx_score_employeur   ON SCORE_QS (score_employeur)    → R1, R4
+  - idx_score_global      ON SCORE_QS (score_global)       → R5
+  - idx_score_ratio       ON SCORE_QS (score_ratio)        → R8
+  - idx_score_rang        ON SCORE_QS (rang)               → R7, R8
+  - Couvert par UNIQUE : (id_univ, id_edition)             → toutes les jointures
+
+
+4.2 Jeu de données DML (sql/insertion.sql)
+-------------------------------------------
+
+Généré automatiquement par le script Python dataset/generate_insertion.py
+à partir du CSV officiel QS 2025 :
+
+  - 13 pays (États-Unis, Royaume-Uni, France, Suisse, Singapour, Australie,
+             Chine, Hong Kong, Canada, Allemagne, Japon, Corée du Sud, Pays-Bas)
+  - 4 types d'université
+  - 50 universités (Top 50 QS 2025)
+  - 4 éditions : 2022, 2023, 2024, 2025
+  - 200 lignes dans SCORE_QS
+  - 15 entrées dans CLASSEMENT_REF (ARWU Shanghai 2024)
+
+  Universités françaises incluses :
+  - Université PSL (Paris Sciences et Lettres) — rang #24 QS 2025
+  - Institut Polytechnique de Paris            — rang #46 QS 2025
+
+================================================================================
+5. REQUÊTES SQL ANALYTIQUES (R1–R8)
+================================================================================
+
+Toutes les requêtes sont accessibles via l'interface stats.php avec sélection
+de l'édition. Elles utilisent exclusivement des paramètres PDO préparés (AC-19).
+
+────────────────────────────────────────────────────────────────────────────────
+R1 — Employabilité supérieure à réputation académique
+Technique : Comparaison inter-colonnes + ORDER BY
+────────────────────────────────────────────────────────────────────────────────
+
+Pour une édition choisie, liste les universités dont le score employeur dépasse
+le score de réputation académique, avec l'écart calculé, triées par écart DESC.
+
+  SELECT u.nom, sq.score_employeur, sq.score_rep_acad,
+         ROUND(sq.score_employeur - sq.score_rep_acad, 1) AS ecart
+  FROM SCORE_QS sq
+  JOIN UNIVERSITE u ON u.id_univ = sq.id_univ
+  WHERE sq.id_edition = :eid
+    AND sq.score_employeur > sq.score_rep_acad
+  ORDER BY ecart DESC;
+
+Résultat attendu : universités pour lesquelles la réputation auprès des
+employeurs est plus forte que leur reconnaissance académique (ex. MIT, Stanford).
+
+
+────────────────────────────────────────────────────────────────────────────────
+R2 — Évolution des universités françaises par édition
+Technique : Agrégation GROUP BY + filtre pays
+────────────────────────────────────────────────────────────────────────────────
+
+Calcule le rang moyen et le score global moyen des universités françaises
+pour chaque édition disponible.
+
+  SELECT e.annee,
+         ROUND(AVG(sq.rang), 1)         AS rang_moyen,
+         ROUND(AVG(sq.score_global), 1) AS score_moyen,
+         COUNT(sq.id_score)             AS nb_universites
+  FROM SCORE_QS sq
+  JOIN UNIVERSITE u ON u.id_univ    = sq.id_univ
+  JOIN PAYS p       ON p.id_pays    = u.id_pays
+  JOIN EDITION_QS e ON e.id_edition = sq.id_edition
+  WHERE p.code_iso = 'FR'
+  GROUP BY e.id_edition, e.annee
+  ORDER BY e.annee ASC;
+
+Résultat attendu : 4 lignes (une par édition) montrant l'évolution de PSL et
+de l'Institut Polytechnique de Paris dans le classement mondial.
+
+
+────────────────────────────────────────────────────────────────────────────────
+R3 — Top 50 QS non présentes dans le classement ARWU
+Technique : Sous-requête NOT IN
+────────────────────────────────────────────────────────────────────────────────
+
+Universités dans le top 50 QS d'une édition donnée qui n'apparaissent pas
+dans la table CLASSEMENT_REF (référentiel ARWU Shanghai 2024).
+
+  SELECT u.nom, p.nom AS pays, sq.rang, sq.score_global
+  FROM SCORE_QS sq
+  JOIN UNIVERSITE u ON u.id_univ = sq.id_univ
+  JOIN PAYS p       ON p.id_pays = u.id_pays
+  WHERE sq.id_edition = :eid
+    AND sq.rang <= 50
+    AND u.nom NOT IN (
+        SELECT nom_institution FROM CLASSEMENT_REF
+    )
+  ORDER BY sq.rang ASC;
+
+Résultat attendu : universités fortes en QS mais absentes de l'ARWU (ex. NUS,
+Imperial College, UCL, PSL, NTU) — illustre les divergences entre classements.
+
+
+────────────────────────────────────────────────────────────────────────────────
+R4 — Pays homogènes en employabilité
+Technique : Sous-requête ALL (quantificateur universel)
+────────────────────────────────────────────────────────────────────────────────
+
+Pays dont TOUTES les universités classées ont un score employeur > 80,
+pour l'édition sélectionnée.
+
+  SELECT p.nom AS pays, p.continent,
+         COUNT(sq.id_score)            AS nb_universites,
+         ROUND(MIN(sq.score_employeur), 1) AS min_employeur
+  FROM PAYS p
+  JOIN UNIVERSITE u ON u.id_pays = p.id_pays
+  JOIN SCORE_QS sq  ON sq.id_univ = u.id_univ
+  WHERE sq.id_edition = :eid
+    AND 80 < ALL (
+        SELECT sq2.score_employeur
+        FROM SCORE_QS sq2
+        JOIN UNIVERSITE u2 ON u2.id_univ = sq2.id_univ
+        WHERE u2.id_pays = p.id_pays AND sq2.id_edition = :eid
+          AND sq2.score_employeur IS NOT NULL
+    )
+  GROUP BY p.id_pays, p.nom, p.continent
+  ORDER BY min_employeur DESC;
+
+Résultat attendu : pays dont toutes les universités sont au-dessus du seuil
+d'employabilité de 80 (ex. Suisse avec ETH et EPFL).
+
+
+────────────────────────────────────────────────────────────────────────────────
+R5 — Score global supérieur à la moyenne nationale
+Technique : Sous-requête scalaire corrélée
+────────────────────────────────────────────────────────────────────────────────
+
+Pour l'édition sélectionnée, liste les universités dont le score global dépasse
+la moyenne de toutes les universités du même pays.
+
+  SELECT u.nom, p.nom AS pays, sq.score_global,
+         ROUND((
+             SELECT AVG(sq2.score_global)
+             FROM SCORE_QS sq2
+             JOIN UNIVERSITE u2 ON u2.id_univ = sq2.id_univ
+             WHERE u2.id_pays = u.id_pays AND sq2.id_edition = :eid
+         ), 1) AS moy_nationale,
+         sq.rang
+  FROM SCORE_QS sq
+  JOIN UNIVERSITE u ON u.id_univ = sq.id_univ
+  JOIN PAYS p       ON p.id_pays = u.id_pays
+  WHERE sq.id_edition = :eid
+    AND sq.score_global > (
+        SELECT AVG(sq3.score_global)
+        FROM SCORE_QS sq3
+        JOIN UNIVERSITE u3 ON u3.id_univ = sq3.id_univ
+        WHERE u3.id_pays = u.id_pays AND sq3.id_edition = :eid
+    )
+  ORDER BY (sq.score_global - moy_nationale) DESC;
+
+Résultat attendu : la corrélation identifie les universités qui "tirent" leur
+pays vers le haut dans le classement (ex. Oxford au Royaume-Uni, PSL en France).
+
+
+────────────────────────────────────────────────────────────────────────────────
+R6 — Critère présentant la plus forte dispersion
+Technique : Dispersion MAX–MIN + AVG simulé
+────────────────────────────────────────────────────────────────────────────────
+
+Identifie, pour l'édition sélectionnée, le critère QS qui présente la plus
+grande amplitude de scores entre les universités (indicateur de discrimination).
+
+  SELECT critere, MAX(val)-MIN(val) AS amplitude, AVG(val) AS moy
+  FROM (
+      SELECT 'Rép. Académique'  AS critere, score_rep_acad  AS val FROM SCORE_QS WHERE id_edition = :e1
+      UNION ALL
+      SELECT 'Employeur',        score_employeur  FROM SCORE_QS WHERE id_edition = :e2
+      UNION ALL
+      SELECT 'Ratio',            score_ratio      FROM SCORE_QS WHERE id_edition = :e3
+      UNION ALL
+      SELECT 'Citations',        score_citations  FROM SCORE_QS WHERE id_edition = :e4
+      UNION ALL
+      SELECT 'Intl. Étudiants',  score_intl_etu   FROM SCORE_QS WHERE id_edition = :e5
+      UNION ALL
+      SELECT 'Intl. Enseignants',score_intl_ens   FROM SCORE_QS WHERE id_edition = :e6
+  ) AS dispersions
+  GROUP BY critere
+  ORDER BY amplitude DESC;
+
+Résultat attendu : l'internationalisation (étudiants/enseignants) présente en
+général la plus forte dispersion — les grandes universités américaines et
+japonaises ont peu d'internationaux contrairement aux universités de Hong Kong
+ou de Singapour.
+
+
+────────────────────────────────────────────────────────────────────────────────
+R7 — Universités très stables dans le classement
+Technique : HAVING sur MAX(rang)–MIN(rang)
+────────────────────────────────────────────────────────────────────────────────
+
+Universités dont l'écart de rang est inférieur à 10 places sur toutes les
+éditions disponibles — les "piliers" du classement mondial.
+
+  SELECT u.nom, p.nom AS pays,
+         MIN(sq.rang) AS rang_min, MAX(sq.rang) AS rang_max,
+         MAX(sq.rang) - MIN(sq.rang) AS amplitude_rang,
+         COUNT(sq.id_score) AS nb_editions
+  FROM SCORE_QS sq
+  JOIN UNIVERSITE u ON u.id_univ = sq.id_univ
+  JOIN PAYS p       ON p.id_pays = u.id_pays
+  GROUP BY sq.id_univ, u.nom, p.nom
+  HAVING MAX(sq.rang) - MIN(sq.rang) < 10 AND COUNT(sq.id_score) >= 2
+  ORDER BY amplitude_rang ASC, rang_min ASC;
+
+Résultat attendu : MIT, Oxford, Cambridge, Harvard — universités dont le rang
+ne varie pas de plus de 9 places sur toutes les éditions analysées.
+
+
+────────────────────────────────────────────────────────────────────────────────
+R8 — Top 10 meilleur ratio étudiants/enseignants
+Technique : RANK() OVER (window function MySQL 8.0)
+────────────────────────────────────────────────────────────────────────────────
+
+Top 10 universités par score ratio étudiants/enseignants pour l'édition
+sélectionnée, avec leur rang général dans le classement QS.
+
+  SELECT u.nom, p.nom AS pays,
+         sq.score_ratio, sq.rang AS rang_global,
+         RANK() OVER (ORDER BY sq.score_ratio DESC) AS rang_ratio
+  FROM SCORE_QS sq
+  JOIN UNIVERSITE u ON u.id_univ = sq.id_univ
+  JOIN PAYS p       ON p.id_pays = u.id_pays
+  WHERE sq.id_edition = :eid AND sq.score_ratio IS NOT NULL
+  ORDER BY sq.score_ratio DESC
+  LIMIT 10;
+
+Résultat attendu : Caltech, MIT, Stanford dominent ce critère. Des universités
+comme Melbourne ont un mauvais ratio malgré un classement global élevé.
+
+================================================================================
+6. INTERFACE WEB PHP
+================================================================================
+
+6.1 Architecture
+-----------------
+
+L'application suit une architecture MVC simplifiée sans framework :
+
+  - Chaque page PHP est autonome et réutilise un fichier de connexion centralisé
+  - La connexion PDO est définie dans connexion.php (require_once sur toutes pages)
+  - Les templates HTML sont gérés par deux partials : header.php et footer.php
+  - Les graphiques sont rendus côté client en JavaScript (Chart.js 4.4.1)
+  - Le style est assuré par Tailwind CSS (CDN) + surcharges dans css/style.css
+  - Les icônes sont Font Awesome 6.5.1 (CDN) — aucun emoji dans l'interface
+
+Sécurité :
+  - Toutes les entrées utilisateur passent par filter_input() avant traitement
+  - Toutes les requêtes SQL utilisent PDO::prepare() avec paramètres nommés
+  - Aucune concaténation de chaîne dans les requêtes SQL
+  - Les erreurs PDO sont loggées (error_log) sans exposition à l'utilisateur
+  - htmlspecialchars() systématique sur toutes les sorties HTML
+
+
+6.2 Description des pages
+--------------------------
+
+  INDEX.PHP — Dashboard de synthèse mondiale (F5)
+    Requêtes : Top 10 mondial, répartition par continent, répartition par type
+    Graphiques : Bar chart horizontal (continents), Doughnut (types)
+    Liens rapides vers les 5 fonctionnalités principales
+
+  UNIVERSITE.PHP — Fiche université (F2)
+    Paramètre : ?id=X (id_univ, validé par filter_input FILTER_VALIDATE_INT)
+    Requêtes : Données université + Scores + Moyennes mondiales + Trajectoire
+    Graphiques : Radar 6 axes (université vs moyenne mondiale), Line chart (rang)
+    Barres CSS de progression pour chaque critère avec comparaison à la moyenne
+
+  PAYS.PHP — Exploration par pays (F4)
+    Paramètre : ?pays=XX (code ISO, validé par FILTER_SANITIZE_SPECIAL_CHARS)
+    Requêtes : Universités du pays, évolution rang moyen (R2), homogénéité (R4)
+    Graphiques : Bar chart évolution rang moyen par édition
+    Indicateur visuel homogénéité employabilité > 80 (vert/orange)
+
+  RECOMMANDATION.PHP — Moteur de recommandation (F1 + Bonus)
+    Formulaire POST avec 6 curseurs HTML range (0–100, step=1)
+    JavaScript : contrainte somme = 100% en temps réel, barre de progression
+    Requête SQL : score pondéré personnalisé avec 6 paramètres nommés PDO
+    Affichage : Top 10 avec rang personnalisé, score calculé, liens fiches
+
+  COMPARAISON.PHP — Comparateur côte à côte (F3)
+    Paramètres : ?id1=X&id2=Y (deux universités différentes)
+    Graphiques : Radar superposé (2 datasets orange/bleu), Double line chart
+    Tableau : 6 scores avec flèche ↑ sur le meilleur score par critère
+
+  STATS.PHP — Interface analytique (R1–R8)
+    Menu déroulant : sélection requête + édition de référence
+    Catalogue PHP de 8 closures, chacune encapsulant une requête PDO
+    Navigation rapide entre les 8 requêtes par liens contextuels
+    Affichage tabulaire avec message d'état vide explicite si aucun résultat
+
+================================================================================
+7. REQUÊTE BONUS — MOTEUR DE RECOMMANDATION PERSONNALISÉ
+================================================================================
+
+La page recommandation.php implémente un moteur de scoring personnalisé
+permettant à l'utilisateur de définir ses propres pondérations pour les 6
+critères QS, avec la contrainte que leur somme soit égale à 100%.
+
+Formule de calcul du score personnalisé :
+
+  Score_perso =
+    (w1 × score_rep_acad  +  w2 × score_employeur  +  w3 × score_ratio
+   + w4 × score_citations  +  w5 × score_intl_etu   +  w6 × score_intl_ens)
+   ÷ 100
+
+  avec : w1 + w2 + w3 + w4 + w5 + w6 = 100
+
+Implémentation JavaScript côté client :
+  - Affichage en temps réel de la somme des poids (barre de progression verte/rouge)
+  - Tolérance de ±2% pour compenser les arrondis des sliders
+  - Soumission bloquée si la somme s'écarte de plus de 2% de 100
+
+Implémentation SQL côté serveur (PDO préparé, 7 paramètres nommés) :
+  SELECT u.nom, p.nom AS pays, sq.rang,
+         ROUND((:w1 * COALESCE(sq.score_rep_acad, 0)
+              + :w2 * COALESCE(sq.score_employeur, 0)
+              + :w3 * COALESCE(sq.score_ratio, 0)
+              + :w4 * COALESCE(sq.score_citations, 0)
+              + :w5 * COALESCE(sq.score_intl_etu, 0)
+              + :w6 * COALESCE(sq.score_intl_ens, 0)) / 100, 2) AS score_perso
+  FROM SCORE_QS sq ...
+  WHERE e.annee = :annee
+  ORDER BY score_perso DESC LIMIT 10;
+
+Cas d'usage illustratif :
+  Un étudiant souhaitant partir en stage à l'étranger pourrait pondérer :
+    Employabilité : 50%  |  Internationalisation étudiants : 25%
+    Internationalisation enseignants : 15%  |  Autres : 10%
+  → Le classement personnalisé fera remonter des universités comme l'Université
+    de Hong Kong ou NTU, plutôt que Harvard qui a un faible score international.
+
+================================================================================
+8. CONCLUSION
+================================================================================
+
+Ce projet a permis de mettre en œuvre l'ensemble du cycle de développement d'une
+application base de données, de la modélisation conceptuelle jusqu'au déploiement
+d'une interface web fonctionnelle :
+
+  Apports techniques :
+  - Maîtrise de la modélisation multi-critères avec données longitudinales (MCD/MLD)
+  - Implémentation de 8 requêtes SQL avancées : NOT IN, ALL, sous-requêtes
+    scalaires corrélées, RANK() OVER (window function MySQL 8.0)
+  - Développement d'une interface PHP/MySQL sécurisée (PDO paramétré)
+  - Intégration de visualisations interactives (Chart.js : radar, line, bar, doughnut)
+  - Import et traitement de données réelles via script Python (CSV QS officiel)
+
+  Apports méthodologiques :
+  - Analyse critique de la méthodologie QS et identification de ses limites
+  - Conception d'un moteur de recommandation qui dépasse les limites du classement
+    générique en permettant une personnalisation par l'utilisateur
+
+  Perspectives d'amélioration :
+  - Intégration des données QS 2026 (fichier Excel disponible dans le projet)
+  - Ajout d'une authentification pour sauvegarder les profils de pondération
+  - Connexion à l'API QS en temps réel pour une mise à jour automatique
+  - Comparaison avec d'autres classements (ARWU, THE) sur la même interface
+
+================================================================================
+FIN DU RAPPORT
+================================================================================
+Projet BD n°6 — M1 Informatique · Bases de données · Avril 2026
+Caroline · Ibtissam · Liza · Koceila
+================================================================================

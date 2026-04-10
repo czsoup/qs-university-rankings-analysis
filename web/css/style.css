@@ -1,0 +1,307 @@
+/* ==========================================================================
+   QS World University Rankings — Feuille de style locale
+   Complément aux classes utilitaires Tailwind CSS
+   Palette : Navy #1E3A5F  |  Accent/Orange #E67E22
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Variables CSS globales
+   -------------------------------------------------------------------------- */
+:root {
+    --color-navy:   #1E3A5F;
+    --color-accent: #E67E22;
+    --color-accent-light: rgba(230, 126, 34, 0.15);
+    --color-navy-light:   rgba(30,  58,  95, 0.08);
+    --radius-card:  1rem;
+    --shadow-card:  0 2px 12px rgba(30, 58, 95, 0.08);
+    --transition:   0.2s ease;
+}
+
+/* --------------------------------------------------------------------------
+   Reset / base
+   -------------------------------------------------------------------------- */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    color: #1f2937;
+}
+
+/* --------------------------------------------------------------------------
+   Barres de progression CSS (critères QS)
+   .progress-bar est utilisé dans universite.php
+   -------------------------------------------------------------------------- */
+.progress-bar {
+    position: relative;
+    height: 0.75rem;          /* 12px */
+    border-radius: 9999px;
+    transition: width var(--transition);
+    min-width: 2px;
+}
+
+.progress-bar::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(to right, transparent 60%, rgba(255,255,255,0.25));
+    pointer-events: none;
+}
+
+/* Wrapper de barre de progression (fond gris) */
+.progress-track {
+    width: 100%;
+    background-color: #f3f4f6;
+    border-radius: 9999px;
+    overflow: hidden;
+    height: 0.75rem;
+    position: relative;
+}
+
+/* --------------------------------------------------------------------------
+   Conteneur radar Chart.js
+   .radar-wrapper garantit un aspect ratio cohérent
+   -------------------------------------------------------------------------- */
+.radar-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+}
+
+/* Empêche les graphiques de déborder sur mobile */
+canvas {
+    max-width: 100%;
+}
+
+/* --------------------------------------------------------------------------
+   Cartes (surcharge Tailwind pour l'ombre et le radius uniformes)
+   -------------------------------------------------------------------------- */
+.card {
+    background-color: #ffffff;
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    padding: 1.5rem;
+}
+
+/* --------------------------------------------------------------------------
+   Input range (sliders) — recommandation.php
+   Accent couleur sur tous navigateurs
+   -------------------------------------------------------------------------- */
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 9999px;
+    outline: none;
+    cursor: pointer;
+    transition: background var(--transition);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    transition: transform var(--transition), box-shadow var(--transition);
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+    box-shadow: 0 2px 8px rgba(230,126,34,0.4);
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+
+input[type="range"]:focus {
+    background: #d1d5db;
+}
+
+/* --------------------------------------------------------------------------
+   Tableau — style commun pour les résultats analytics (stats.php)
+   -------------------------------------------------------------------------- */
+.analytics-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.analytics-table th {
+    background-color: #f9fafb;
+    color: #6b7280;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.analytics-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #f3f4f6;
+    color: #374151;
+}
+
+.analytics-table tbody tr:hover {
+    background-color: #eff6ff;
+}
+
+.analytics-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* --------------------------------------------------------------------------
+   Badge de rang (médailles 1/2/3)
+   -------------------------------------------------------------------------- */
+.rank-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 9999px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+}
+
+.rank-badge--gold   { background-color: #fbbf24; color: #fff; }
+.rank-badge--silver { background-color: #9ca3af; color: #fff; }
+.rank-badge--bronze { background-color: #f97316; color: #fff; }
+.rank-badge--default{ background-color: #f3f4f6; color: #6b7280; }
+
+/* --------------------------------------------------------------------------
+   Navigation — indicateur de page active
+   (complément aux classes Tailwind dans header.php)
+   -------------------------------------------------------------------------- */
+nav a[aria-current="page"] {
+    background-color: var(--color-accent);
+    color: #ffffff;
+}
+
+/* --------------------------------------------------------------------------
+   Graphiques — état de chargement (skeleton)
+   -------------------------------------------------------------------------- */
+.chart-skeleton {
+    background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+    border-radius: 0.5rem;
+}
+
+@keyframes shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position:  200% 0; }
+}
+
+/* --------------------------------------------------------------------------
+   Message d'erreur / vide génériques
+   -------------------------------------------------------------------------- */
+.state-empty {
+    border: 2px dashed #bfdbfe;
+    background-color: #eff6ff;
+    border-radius: var(--radius-card);
+    padding: 3rem;
+    text-align: center;
+}
+
+.state-empty p.icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.state-empty p.title {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--color-navy);
+    margin-bottom: 0.5rem;
+}
+
+.state-empty p.subtitle {
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive — breakpoint 375px (mobile petit format)
+   AC-20 : aucun overflow horizontal, graphiques lisibles
+   -------------------------------------------------------------------------- */
+@media (max-width: 375px) {
+    body {
+        font-size: 14px;
+    }
+
+    /* Navigation : empêcher le débordement des liens */
+    nav .flex {
+        flex-wrap: wrap;
+    }
+
+    /* Réduire les paddings des cartes sur très petit écran */
+    .card,
+    .bg-white.rounded-2xl {
+        padding: 1rem;
+    }
+
+    /* Radar — hauteur réduite pour tenir dans l'écran */
+    .radar-wrapper {
+        height: 240px !important;
+    }
+
+    /* Tableaux — permettre le scroll horizontal plutôt que d'écraser */
+    .overflow-x-auto {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Graphiques : hauteur minimale garantie */
+    canvas {
+        min-height: 180px;
+    }
+
+    /* Textes tronqués */
+    .truncate-mobile {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 140px;
+    }
+
+    /* Formulaires : pleine largeur sur mobile */
+    select,
+    input[type="range"] {
+        width: 100%;
+    }
+
+    /* Grilles → une colonne */
+    .grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* --------------------------------------------------------------------------
+   Impression (optionnel — qualité rapport)
+   -------------------------------------------------------------------------- */
+@media print {
+    nav, footer, button, form { display: none !important; }
+    body { font-size: 12pt; color: #000; }
+    .bg-white { box-shadow: none; border: 1px solid #ccc; }
+}
