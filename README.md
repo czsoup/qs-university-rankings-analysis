@@ -22,29 +22,28 @@ SITE : https://qs-university-rankings-analysis-production.up.railway.app/
 
 ## Prérequis
 
-- Windows 10 ou 11
-- Connexion internet (Tailwind CSS, Chart.js et Font Awesome chargés via CDN)
-- PowerShell (inclus dans Windows — clic droit sur le menu Démarrer → "Windows PowerShell")
+- Tailwind CSS, Chart.js et Font Awesome chargés via CDN
+
 
 ---
 
 ## INSTALLATION COMPLÈTE (première fois uniquement)
 
-> **Si tu as déjà PHP et MySQL installés** (ex. via XAMPP), saute à la section
+> **Si PHP et MySQL déjà installés** (ex. via XAMPP), sauter à la section
 > **"Alternative XAMPP/WAMP"** plus bas.
 
 ---
 
 ### Étape 1 — Installer Scoop (gestionnaire de paquets Windows)
 
-Ouvre **PowerShell** et colle exactement ces deux lignes :
+Ouvir **PowerShell**  :
 
 ```powershell
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
 ```
 
-Ferme et rouvre PowerShell une fois terminé.
+Fermer et rouvrir PowerShell une fois terminé.
 
 ---
 
@@ -54,7 +53,6 @@ Ferme et rouvre PowerShell une fois terminé.
 scoop install php mysql
 ```
 
-Durée : 2–5 minutes selon ta connexion. Attends la fin complète.
 
 Vérification :
 
@@ -73,34 +71,34 @@ Les deux commandes doivent afficher un numéro de version.
 notepad "$env:USERPROFILE\scoop\apps\php\current\php.ini"
 ```
 
-Dans le fichier qui s'ouvre, fais **Ctrl+F** et cherche :
+Dans le fichier qui s'ouvre, faire **Ctrl+F** et chercher :
 
 ```
 ;extension=pdo_mysql
 ```
 
-Supprime le `;` au début de la ligne pour obtenir :
+Supprimer le `;` au début de la ligne pour obtenir :
 
 ```
 extension=pdo_mysql
 ```
 
-Fais **Ctrl+S** pour sauvegarder, puis ferme le Bloc-notes.
+Sauvegarder. 
 
-Vérifie que ça marche :
+Vérifier que ça marche :
 
 ```powershell
 php -m | findstr pdo_mysql
 ```
 
-Résultat attendu : `pdo_mysql` (si rien ne s'affiche, recommence l'étape 3)
+Résultat attendu : `pdo_mysql` (si rien ne s'affiche, recommencer l'étape 3)
 
 ---
 
 ### Étape 4 — Initialiser le serveur MySQL
 
-> **À faire une seule fois.** Si MySQL a déjà été initialisé, ignore cette étape
-> (si tu as une erreur "already exists", c'est normal, passe à l'étape 5).
+> **À faire une seule fois.** Si MySQL a déjà été initialisé, ignorer cette étape
+> (si  erreur "already exists", passer à l'étape 5).
 
 ```powershell
 mysqld --initialize-insecure
@@ -112,20 +110,20 @@ Cette commande crée les fichiers système de MySQL avec un compte `root` sans m
 
 ### Étape 5 — Créer la base de données
 
-Démarre d'abord le serveur MySQL :
+Démarrer d'abord le serveur MySQL :
 
 ```powershell
 Start-Process mysqld -WindowStyle Hidden
 Start-Sleep -Seconds 3
 ```
 
-Puis crée la base :
+Puis créer la base :
 
 ```powershell
 mysql -u root -e "CREATE DATABASE IF NOT EXISTS qs_rankings CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 ```
 
-Si tu vois `Query OK` ou aucune erreur : c'est bon.
+si `Query OK` ou aucune erreur : c'est bon.
 
 ---
 
@@ -133,35 +131,35 @@ Si tu vois `Query OK` ou aucune erreur : c'est bon.
 
 > **Note :** La redirection `<` ne fonctionne pas dans PowerShell. On utilise le **pipe** `Get-Content | mysql`.
 
-**6.1 — Place-toi dans le dossier du projet**
+**6.1 — se placer dans le dossier du projet**
 
 ```powershell
 cd "C:\Users\TON_NOM\Documents\...\ProjetBD_Caroline_Ibtissam_Liza_Koceila_2026"
 ```
 
-(Remplace le chemin par le tien — tu peux copier le chemin depuis l'explorateur de fichiers.)
+(Remplacer le chemin par le sien.)
 
-**6.2 — Crée la base de données**
+**6.2 — Créer la base de données**
 
 ```powershell
 mysql -u root -e "DROP DATABASE IF EXISTS qs_rankings; CREATE DATABASE qs_rankings CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 ```
 
-**6.3 — Importe les scripts via pipe** (depuis PowerShell, dans le dossier du projet)
+**6.3 — Importer les scripts via pipe** (depuis PowerShell, dans le dossier du projet)
 
 ```powershell
 Get-Content "sql\creation.sql" -Raw | mysql -u root qs_rankings
 Get-Content "sql\insertion.sql" -Raw | mysql -u root qs_rankings
 ```
 
-Si MySQL n'est pas démarré, lance d'abord :
+Si MySQL n'est pas démarré, lancer d'abord :
 
 ```powershell
 Start-Process mysqld -WindowStyle Hidden
 Start-Sleep -Seconds 3
 ```
 
-**6.4 — Vérifie que tout est bien importé**
+**6.4 — Vérifier que tout est bien importé**
 
 ```powershell
 mysql -u root qs_rankings -e "SELECT COUNT(*) FROM SCORE_QS; SELECT COUNT(*) FROM UNIVERSITE;"
@@ -173,7 +171,7 @@ Résultats attendus : `200` scores et `50` universités.
 
 ## LANCER LE SITE
 
-> À faire **à chaque fois** que tu veux voir le site (après avoir redémarré le PC).
+> À faire **à chaque fois** pour voir le site (après avoir redémarré le PC).
 
 **Ouvre PowerShell** et exécute dans l'ordre :
 
@@ -189,10 +187,9 @@ cd "C:\Users\zgcar\Documents\Master_BIG_DATA\COURS\M1S2\1_Representation_connais
 php -S localhost:8000 -t web
 ```
 
-Puis ouvre ton navigateur et va sur : **http://localhost:8000**
+Puis ouvrir ton navigateur sur : **http://localhost:8000**
 
-> Laisse la fenêtre PowerShell ouverte pendant que tu navigues sur le site.
-> Pour arrêter : appuie sur `Ctrl+C` dans PowerShell.
+> Laisser la fenêtre PowerShell ouverte pendant que la navigation sur le site.
 
 ---
 
@@ -386,4 +383,3 @@ web/css/style.css
 | Chart.js | 4.4.1 | CDN |
 | Font Awesome | 6.5.1 Free | CDN |
 
-> Aucun Composer, aucun npm, aucun build — tout fonctionne directement.
