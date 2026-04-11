@@ -3,9 +3,7 @@
 **M1 Informatique · Bases de données · Avril 2026**  
 **Équipe :** Caroline · Ibtissam · Liza · Koceila
 
-> **Pour voir le site en 5 minutes :** suivre les étapes dans l'ordre, de la section
-> "Installation" jusqu'à "Lancer le site". Chaque commande est copiable telle quelle.
-
+SITE : https://qs-university-rankings-analysis-production.up.railway.app/
 ---
 
 ## État du projet
